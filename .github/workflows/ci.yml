@@ -11,10 +11,15 @@ permissions:
 
 jobs:
   test:
+    name: Test MariaDB ${{ matrix.mariadb }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mariadb: ['13.0.2', '12.3.3']
     services:
       mariadb:
-        image: mariadb:11.8
+        image: mariadb:${{ matrix.mariadb }}
         env:
           MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'yes'
           MARIADB_DATABASE: test

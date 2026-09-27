@@ -1,6 +1,6 @@
 {
   "name": "@melroy89/fastify-mariadb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Fastify MariaDB connection plugin",
   "main": "index.js",
   "engines": {
@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "mariadb": "docker run -d -p 3306:3306 -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes --rm mariadb:11.8",
+    "mariadb": "docker run -d -p 3306:3306 -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes -e MARIADB_DATABASE=test --rm mariadb:13.0.2",
     "test": "npm run test:unit && npm run test:typescript",
     "test:unit": "c8 --100 node --test",
     "test:typescript": "tstyche"

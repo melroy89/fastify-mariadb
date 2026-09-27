@@ -14,6 +14,7 @@ npm install @melroy89/fastify-mariadb
 ```
 
 This version supports Fastify 5 and requires Node.js 20 or newer, as required by the MariaDB connector.
+The test suite runs against MariaDB 13.0.2 (rolling) and 12.3.3 (LTS).
 
 ## Promise API
 

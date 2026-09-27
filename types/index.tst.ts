@@ -19,6 +19,9 @@ declare module 'fastify' {
   }
 }
 
+const unknownClient: unknown = {}
+if (isMariaDBPool(unknownClient)) expect(unknownClient.pool).type.toBe<Pool>()
+
 const app = fastify()
 app.register(fastifyMariadb, { host: 'localhost', user: 'root', database: 'test' })
 app.register(fastifyMariadb, { connectionString: 'mariadb://root@localhost/test' })

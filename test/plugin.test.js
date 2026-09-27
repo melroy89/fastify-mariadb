@@ -157,3 +157,17 @@ test('pool connection failure reaches Fastify', async (t) => {
   app.register(plugin, { ...config, port: 6000, acquireTimeout: 1000, promise: true })
   await t.assert.rejects(app.ready(), /failed to retrieve a connection from pool/)
 })
+
+test('connector options and readable insert values pass through', async (t) => {
+  const { Readable } = require('node:stream')
+  const app = Fastify()
+  t.after(() => app.close())
+  app.register(plugin, { ...config, promise: true, type: 'connection', pipelining: true, rowsAsArray: true })
+  await app.ready()
+  await app.mariadb.query('CREATE TEMPORARY TABLE fastify_mariadb_stream (value TEXT)')
+  await app.mariadb.query('INSERT INTO fastify_mariadb_stream VALUES (?)', [Readable.from([Buffer.from('streamed')])])
+  const first = app.mariadb.query('SELECT value FROM fastify_mariadb_stream')
+  const second = app.mariadb.query('SELECT 2 AS value')
+  t.assert.deepStrictEqual((await first)[0], ['streamed'])
+  t.assert.deepStrictEqual((await second)[0], [2])
+})

@@ -93,6 +93,17 @@ await fastify.mariadb.batch(
 )
 ```
 
+The connector also accepts a readable stream as a query value. Supply Buffer chunks when streaming binary or text data:
+
+```js
+const { Readable } = require('node:stream')
+
+await fastify.mariadb.query(
+  'INSERT INTO documents (body) VALUES (?)',
+  [Readable.from([Buffer.from('content')])]
+)
+```
+
 For large result sets in connection mode, use `queryStream` and close the stream if processing stops early:
 
 ```js
@@ -105,6 +116,8 @@ try {
 ```
 
 Connection options such as TLS configuration, authentication plugins, pipelining, and metadata handling are passed to the connector. See the [connector documentation](https://mariadb.com/docs/connectors/mariadb-connector-nodejs) for their behavior. This plugin does not add its own performance guarantees.
+
+If the database is unavailable while registering a pool, set the connector's `acquireTimeout` below Fastify's `pluginTimeout` so the pool error reaches Fastify before its plugin startup timeout.
 
 ## TypeScript
 

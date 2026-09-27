@@ -23,10 +23,10 @@ declare namespace fastifyMariadb {
   }
 
   export type MariaDBClient = MariaDBConnection | MariaDBPool | MariaDBPromiseConnection | MariaDBPromisePool
-  export function isMariaDBConnection (obj: MariaDBClient): obj is MariaDBConnection
-  export function isMariaDBPool (obj: MariaDBClient): obj is MariaDBPool
-  export function isMariaDBPromiseConnection (obj: MariaDBClient): obj is MariaDBPromiseConnection
-  export function isMariaDBPromisePool (obj: MariaDBClient): obj is MariaDBPromisePool
+  export function isMariaDBConnection (obj: unknown): obj is MariaDBConnection
+  export function isMariaDBPool (obj: unknown): obj is MariaDBPool
+  export function isMariaDBPromiseConnection (obj: unknown): obj is MariaDBPromiseConnection
+  export function isMariaDBPromisePool (obj: unknown): obj is MariaDBPromisePool
 
   export type ConnectionType = 'connection' | 'pool'
   export type FastifyMariaDBOptions = PoolConfig & ConnectionConfig & {

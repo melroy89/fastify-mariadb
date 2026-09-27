@@ -85,6 +85,17 @@ The plugin accepts MariaDB connector pool and connection options, plus:
 
 `fastify.mariadb` exposes `query`, `execute`, `batch`, `importFile`, `escape`, and `escapeId`. Pool mode also exposes `pool` and `getConnection`. Connection mode exposes `connection` and `queryStream`. The underlying connector instance provides its additional methods. The plugin does not provide a `format` helper; use query placeholders instead.
 
+## Benchmark
+
+A sequential, parameterized three-table join ran against the same seeded data (400 customers, 4,000 orders, and 12,000 order items). Each value is the median of five rounds of 200 queries after warmup on one host. The comparison includes each plugin's connector and its own LTS database server. Lower latency is better; the difference is relative to the MySQL stack.
+
+| API mode | `@fastify/mysql` + MySQL 9.7.2 | `@melroy89/fastify-mariadb` + MariaDB 12.3.3 | Difference |
+| --- | ---: | ---: | ---: |
+| Promise pool | 1.3036 ms | 1.0639 ms | -18.4% |
+| Promise connection | 1.2843 ms | 1.0529 ms | -18.0% |
+| Callback pool | 1.2775 ms | 1.0851 ms | -15.1% |
+| Callback connection | 1.2975 ms | 1.0477 ms | -19.3% |
+
 ## Connector features
 
 The plugin uses the official connector directly. Its features are available through the exposed methods, the underlying `pool` or `connection`, or connector options passed to `register`:

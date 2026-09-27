@@ -183,6 +183,10 @@ declare module 'fastify' {
 }
 ```
 
+Since version 1.0.3, the package supplies separate ESM and CommonJS declarations. Each resolves the matching MariaDB connector types, so an ESM Fastify application can use `MariaDBPromisePool` directly alongside types imported from `mariadb`. The plugin still supports both `import` and `require` at runtime.
+
+`MariaDBPromisePool` describes the object decorating `fastify.mariadb`. Its `.pool` property is the underlying MariaDB promise `Pool`; `getConnection()` borrows a connection from that pool. Fastify closes the pool when the application closes.
+
 Runtime guards `isMariaDBPool`, `isMariaDBPromisePool`, `isMariaDBConnection`, and `isMariaDBPromiseConnection` are also exported. The client has a `kind` field with one of `callback-pool`, `promise-pool`, `callback-connection`, or `promise-connection`.
 
 ## Acknowledgments

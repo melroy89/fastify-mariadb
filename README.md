@@ -1,14 +1,14 @@
-# fastify-mariadb
+# @melroy89/fastify-mariadb
 
 [![CI](https://github.com/melroy89/fastify-mariadb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/melroy89/fastify-mariadb/actions/workflows/ci.yml)
-[![NPM version](https://img.shields.io/npm/v/fastify-mariadb.svg?style=flat)](https://www.npmjs.com/package/fastify-mariadb)
+[![NPM version](https://img.shields.io/npm/v/%40melroy89%2Ffastify-mariadb.svg?style=flat)](https://www.npmjs.com/package/@melroy89/fastify-mariadb)
 
 Fastify plugin for the official [MariaDB Connector/Node.js](https://github.com/mariadb-corporation/mariadb-connector-nodejs). It shares a pool or connection through `fastify.mariadb` and closes it when Fastify closes.
 
 ## Install
 
 ```sh
-npm install fastify-mariadb
+npm install @melroy89/fastify-mariadb
 ```
 
 This version supports Fastify 5 and requires Node.js 20 or newer, as required by the MariaDB connector.
@@ -20,7 +20,7 @@ Set `promise: true` to use the connector's promise API.
 ```js
 const fastify = require('fastify')()
 
-fastify.register(require('fastify-mariadb'), {
+fastify.register(require('@melroy89/fastify-mariadb'), {
   promise: true,
   host: 'localhost',
   user: 'root',
@@ -55,7 +55,7 @@ try {
 The default is the connector's callback API. Query callbacks receive `(error, rows, metadata)`.
 
 ```js
-fastify.register(require('fastify-mariadb'), {
+fastify.register(require('@melroy89/fastify-mariadb'), {
   host: 'localhost',
   user: 'root',
   database: 'app'
@@ -109,7 +109,7 @@ Connection options such as TLS configuration, authentication plugins, pipelining
 The four exposed client types are `MariaDBPool`, `MariaDBPromisePool`, `MariaDBConnection`, and `MariaDBPromiseConnection`. Use a type matching your `promise` and `type` options:
 
 ```ts
-import type { MariaDBPromisePool } from 'fastify-mariadb'
+import type { MariaDBPromisePool } from '@melroy89/fastify-mariadb'
 
 declare module 'fastify' {
   interface FastifyInstance {

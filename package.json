@@ -1,5 +1,5 @@
 {
-  "name": "fastify-mariadb",
+  "name": "@melroy89/fastify-mariadb",
   "version": "1.0.0",
   "description": "Fastify MariaDB connection plugin",
   "main": "index.js",

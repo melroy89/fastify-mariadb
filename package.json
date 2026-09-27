@@ -1,0 +1,78 @@
+{
+  "name": "fastify-mariadb",
+  "version": "1.0.0",
+  "description": "Fastify MariaDB connection plugin",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "commonjs",
+  "types": "types/index.d.ts",
+  "files": [
+    "index.js",
+    "types/index.d.ts"
+  ],
+  "scripts": {
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "mariadb": "docker run -d -p 3306:3306 -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes --rm mariadb:11.8",
+    "test": "npm run test:unit && npm run test:typescript",
+    "test:unit": "c8 --100 node --test",
+    "test:typescript": "tstyche"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melroy89/fastify-mariadb.git"
+  },
+  "keywords": [
+    "fastify",
+    "mariadb",
+    "database",
+    "connection",
+    "sql"
+  ],
+  "author": "Melroy van den Berg - @melroy89 (https://melroy.org)",
+  "contributors": [
+    {
+      "name": "Tomas Della Vedova",
+      "url": "https://delvedor.dev"
+    },
+    {
+      "name": "Matteo Collina",
+      "email": "hello@matteocollina.com"
+    },
+    {
+      "name": "Manuel Spigolon",
+      "email": "behemoth89@gmail.com"
+    },
+    {
+      "name": "James Sumners",
+      "url": "https://james.sumners.info"
+    },
+    {
+      "name": "Frazer Smith",
+      "email": "frazer.dev@icloud.com",
+      "url": "https://github.com/fdawgs"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/melroy89/fastify-mariadb/issues"
+  },
+  "homepage": "https://github.com/melroy89/fastify-mariadb#readme",
+  "dependencies": {
+    "fastify-plugin": "^6.0.0",
+    "mariadb": "^3.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "c8": "^12.0.0",
+    "eslint": "^9.17.0",
+    "fastify": "^5.0.0",
+    "neostandard": "^0.13.0",
+    "tstyche": "^7.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

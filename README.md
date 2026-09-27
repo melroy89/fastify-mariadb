@@ -5,6 +5,8 @@
 
 Fastify plugin for the official [MariaDB Connector/Node.js](https://github.com/mariadb-corporation/mariadb-connector-nodejs). It shares a pool or connection through `fastify.mariadb` and closes it when Fastify closes.
 
+The public npm package is [@melroy89/fastify-mariadb](https://www.npmjs.com/package/@melroy89/fastify-mariadb).
+
 ## Install
 
 ```sh

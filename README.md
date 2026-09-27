@@ -85,6 +85,23 @@ The plugin accepts MariaDB connector pool and connection options, plus:
 
 `fastify.mariadb` exposes `query`, `execute`, `batch`, `importFile`, `escape`, and `escapeId`. Pool mode also exposes `pool` and `getConnection`. Connection mode exposes `connection` and `queryStream`. The underlying connector instance provides its additional methods. The plugin does not provide a `format` helper; use query placeholders instead.
 
+## Connector features
+
+The plugin uses the official connector directly. Its features are available through the exposed methods, the underlying `pool` or `connection`, or connector options passed to `register`:
+
+| Feature | How to use it |
+| --- | --- |
+| Pooling and prepared statements | Use `query`, `execute`, or `getConnection` on `fastify.mariadb`. |
+| Bulk operations | Use `batch` with multiple parameter sets. |
+| Insert streaming | Pass a readable stream as a query value. |
+| Row streaming | Use `queryStream` in connection mode, or on a connection obtained from a pool. |
+| SQL file import | Use `importFile({ file })`; `database` is optional. |
+| Pipelining | Pass `pipelining: true` in the registration options. |
+| TLS and server authentication | Pass connector TLS options such as `ssl: true`; the connector handles the server's authentication plugin, including ed25519 when configured by the server. |
+| Query metadata and diagnostics | Use `metaAsArray`, `rowsAsArray`, and `trace` connector options as needed. |
+
+MariaDB's metadata optimization, pool behavior, and performance characteristics belong to the connector and server. The plugin adds no separate switches for them and makes no performance guarantee.
+
 For bulk writes, `batch` uses the connector's bulk operation support:
 
 ```js
@@ -116,7 +133,28 @@ try {
 }
 ```
 
-Connection options such as TLS configuration, authentication plugins, pipelining, and metadata handling are passed to the connector. See the [connector documentation](https://mariadb.com/docs/connectors/mariadb-connector-nodejs) for their behavior. This plugin does not add its own performance guarantees.
+In pool mode, call `queryStream` on a borrowed connection and release it after the stream finishes:
+
+```js
+const connection = await fastify.mariadb.getConnection()
+const stream = connection.queryStream('SELECT * FROM users')
+try {
+  for await (const row of stream) {
+    console.log(row)
+  }
+} finally {
+  stream.close()
+  await connection.release()
+}
+```
+
+Import a SQL file with the connector's `importFile` method:
+
+```js
+await fastify.mariadb.importFile({ file: './schema.sql' })
+```
+
+Options such as `pipelining: true`, `ssl: true`, and `trace: true` can be set in `register`. TLS and authentication behavior depend on the server configuration. See the [connector documentation](https://mariadb.com/docs/connectors/mariadb-connector-nodejs) for the full option and method reference.
 
 If the database is unavailable while registering a pool, set the connector's `acquireTimeout` below Fastify's `pluginTimeout` so the pool error reaches Fastify before its plugin startup timeout.
 

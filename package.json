@@ -1,8 +1,21 @@
 {
   "name": "@melroy89/fastify-mariadb",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Fastify MariaDB connection plugin",
   "main": "index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./types/index.d.mts",
+        "default": "./index.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -10,7 +23,10 @@
   "types": "types/index.d.ts",
   "files": [
     "index.js",
-    "types/index.d.ts"
+    "index.mjs",
+    "types/index.d.ts",
+    "types/index.d.cts",
+    "types/index.d.mts"
   ],
   "scripts": {
     "lint": "eslint",

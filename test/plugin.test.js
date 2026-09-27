@@ -88,6 +88,19 @@ test('named instances and duplicate registration', async (t) => {
   t.assert.ok(app.mariadb.second)
 })
 
+test('named instances can use inherited object property names', async (t) => {
+  const app = Fastify()
+  t.after(() => app.close())
+  for (const name of ['toString', 'constructor', '__proto__']) {
+    app.register(plugin, { ...config, name, promise: true })
+  }
+  await app.ready()
+  for (const name of ['toString', 'constructor', '__proto__']) {
+    const rows = await app.mariadb[name].query('SELECT 1 AS value')
+    t.assert.strictEqual(rows[0].value, 1)
+  }
+})
+
 test('duplicate name fails', async (t) => {
   const app = Fastify()
   t.after(() => app.close())

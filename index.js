@@ -34,8 +34,8 @@ function fastifyMariadb (fastify, options, next) {
     else db.getConnection = client.getConnection.bind(client)
 
     if (name) {
-      if (!fastify.mariadb) fastify.decorate('mariadb', {})
-      if (fastify.mariadb[name]) {
+      if (!fastify.mariadb) fastify.decorate('mariadb', Object.create(null))
+      if (Object.hasOwn(fastify.mariadb, name)) {
         closeClient(client, usePromise)
         return next(new Error(`fastify-mariadb '${name}' instance name has already been registered`))
       }

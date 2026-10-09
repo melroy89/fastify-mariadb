@@ -74,15 +74,20 @@ async function createOrder (customerId, productId, quantity) {
 The default is the connector's callback API. Query callbacks receive `(error, rows, metadata)`.
 
 ```js
+const fastify = require('fastify')()
+
 fastify.register(require('@melroy89/fastify-mariadb'), {
   host: 'localhost',
   user: 'root',
   database: 'app'
 })
 
-fastify.mariadb.query('SELECT ? AS value', [1], (error, rows, metadata) => {
+fastify.ready(error => {
   if (error) throw error
-  console.log(rows[0].value, metadata)
+  fastify.mariadb.query('SELECT ? AS value', [1], (error, rows, metadata) => {
+    if (error) throw error
+    console.log(rows[0].value, metadata)
+  })
 })
 ```
 
@@ -151,6 +156,8 @@ The plugin uses the official connector directly. Its features are available thro
 | Query metadata and diagnostics | Use `metaAsArray`, `rowsAsArray`, and `trace` connector options as needed. |
 
 MariaDB's metadata optimization, pool behavior, and performance characteristics belong to the connector and server. The plugin adds no separate switches for them and makes no performance guarantee.
+
+The examples below assume `promise: true` and completed plugin initialization. Run them inside an async function after `await fastify.ready()`, or use top-level `await` in an ES module. Pool mode is assumed unless connection mode is specified.
 
 For bulk writes, `batch` uses the connector's bulk operation support:
 

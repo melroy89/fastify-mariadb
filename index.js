@@ -11,66 +11,79 @@ function fastifyMariadb (fastify, options, next) {
   const mariadb = usePromise ? mariadbPromise : mariadbCallback
   const config = connectionString || connectionOptions
   const isConnection = type === 'connection'
-  const pendingClient = isConnection ? mariadb.createConnection(config) : mariadb.createPool(config)
+  let cancelled = false
+  let cleanup
+  let clientPromise
 
-  function onReady (err, client) {
-    if (err) {
-      if (client) closeClient(client, usePromise)
-      return next(err)
-    }
+  // Install lifecycle handlers before acquiring a client. Promise connections can
+  // arrive after boot has failed; shutdown must also await and close those clients.
+  fastify.addHook('onClose', () => close())
+  function close () {
+    cancelled = true
+    cleanup ||= clientPromise.then(client => usePromise
+      ? client.end()
+      : new Promise((resolve, reject) => client.end(err => err ? reject(err) : resolve())), () => {})
+    return cleanup
+  }
 
-    const db = {
-      [mode]: `${usePromise ? 'promise' : 'callback'}-${isConnection ? 'connection' : 'pool'}`,
-      kind: `${usePromise ? 'promise' : 'callback'}-${isConnection ? 'connection' : 'pool'}`,
-      [isConnection ? 'connection' : 'pool']: client,
-      query: client.query.bind(client),
-      execute: client.execute.bind(client),
-      escape: client.escape.bind(client),
-      escapeId: client.escapeId.bind(client),
-      batch: client.batch.bind(client),
-      importFile: client.importFile.bind(client)
-    }
-    if (isConnection) db.queryStream = client.queryStream.bind(client)
-    else db.getConnection = client.getConnection.bind(client)
+  // A separate initialization step lets after() observe its timeout without
+  // calling ready() during registration, which would stall await register().
+  fastify.register(fp(function initializeMariaDB (_fastify, _options, done) {
+    clientPromise = Promise.resolve().then(() => isConnection
+      ? mariadb.createConnection(config)
+      : mariadb.createPool(config))
 
-    if (name) {
-      if (!fastify.mariadb) fastify.decorate('mariadb', Object.create(null))
-      if (Object.hasOwn(fastify.mariadb, name)) {
-        closeClient(client, usePromise)
-        return next(new Error(`fastify-mariadb '${name}' instance name has already been registered`))
+    clientPromise.then(async client => {
+      if (isConnection) {
+        if (!usePromise) await new Promise((resolve, reject) => client.connect(err => err ? reject(err) : resolve()))
+      } else if (usePromise) {
+        await client.query('SELECT 1')
+      } else {
+        await new Promise((resolve, reject) => client.query('SELECT 1', err => err ? reject(err) : resolve()))
       }
-      fastify.mariadb[name] = db
-    } else {
-      if (fastify.mariadb) {
-        closeClient(client, usePromise)
-        return next(new Error('fastify-mariadb has already been registered'))
-      }
-      fastify.decorate('mariadb', db)
-    }
+      if (cancelled) return
 
-    fastify.addHook('onClose', (_fastify, done) => {
-      if (usePromise) client.end().then(() => done(), done)
-      else client.end(done)
+      const db = {
+        [mode]: `${usePromise ? 'promise' : 'callback'}-${isConnection ? 'connection' : 'pool'}`,
+        kind: `${usePromise ? 'promise' : 'callback'}-${isConnection ? 'connection' : 'pool'}`,
+        [isConnection ? 'connection' : 'pool']: client,
+        query: client.query.bind(client),
+        execute: client.execute.bind(client),
+        escape: client.escape.bind(client),
+        escapeId: client.escapeId.bind(client),
+        batch: client.batch.bind(client),
+        importFile: client.importFile.bind(client)
+      }
+      if (isConnection) db.queryStream = client.queryStream.bind(client)
+      else db.getConnection = client.getConnection.bind(client)
+
+      if (name) {
+        if (!Object.hasOwn(fastify, 'mariadb')) {
+          fastify.decorate('mariadb', Object.assign(Object.create(null), fastify.mariadb))
+        }
+        if (Object.hasOwn(fastify.mariadb, name)) {
+          throw new Error(`fastify-mariadb '${name}' instance name has already been registered`)
+        }
+        Object.defineProperty(fastify.mariadb, name, { value: db, enumerable: true, configurable: true, writable: true })
+      } else {
+        if (fastify.mariadb) {
+          throw new Error('fastify-mariadb has already been registered')
+        }
+        fastify.decorate('mariadb', db)
+      }
+
+      done()
+    }).catch(async err => {
+      const notify = !cancelled
+      await close().catch(() => {})
+      if (notify) done(err)
     })
-    next()
-  }
-
-  if (usePromise) {
-    if (isConnection) {
-      pendingClient.then(client => onReady(null, client), err => onReady(err))
-    } else {
-      pendingClient.query('SELECT 1').then(() => onReady(null, pendingClient), err => onReady(err, pendingClient))
-    }
-  } else if (isConnection) {
-    pendingClient.connect(err => onReady(err, pendingClient))
-  } else {
-    pendingClient.query('SELECT 1', err => onReady(err, pendingClient))
-  }
-}
-
-function closeClient (client, usePromise) {
-  if (usePromise) client.end().catch(() => {})
-  else client.end(() => {})
+  }))
+  fastify.after((err, done) => {
+    if (err) close().catch(() => {})
+    done(err)
+  })
+  next()
 }
 
 function isMariaDBPool (obj) {

@@ -184,3 +184,80 @@ test('connector options and readable insert values pass through', async (t) => {
   t.assert.deepStrictEqual((await first)[0], ['streamed'])
   t.assert.deepStrictEqual((await second)[0], [2])
 })
+
+for (const unnamed of [false, true]) {
+  test(`named clients stay in their scope with ${unnamed ? 'an unnamed' : 'a named'} parent client`, async t => {
+    const app = Fastify()
+    t.after(() => app.close())
+    app.register(plugin, { ...config, promise: true, ...(unnamed ? {} : { name: 'parent' }) })
+    let first, second, descendant
+    app.register(async scope => {
+      first = scope
+      scope.register(plugin, { ...config, promise: true, name: 'local' })
+      scope.register(async child => {
+        descendant = child
+        child.register(plugin, { ...config, promise: true, name: 'nested' })
+      })
+    })
+    app.register(async scope => {
+      second = scope
+      scope.register(plugin, { ...config, promise: true, name: 'local' })
+    })
+    await app.ready()
+    t.assert.strictEqual(app.mariadb.local, undefined)
+    t.assert.strictEqual(first.mariadb.nested, undefined)
+    t.assert.strictEqual(second.mariadb.nested, undefined)
+    t.assert.notStrictEqual(first.mariadb.local, second.mariadb.local)
+    t.assert.strictEqual(descendant.mariadb.local, first.mariadb.local)
+    t.assert.strictEqual(Object.getPrototypeOf(first.mariadb), null)
+    const inherited = unnamed ? first.mariadb : first.mariadb.parent
+    const original = unnamed ? app.mariadb : app.mariadb.parent
+    t.assert.ok(plugin.isMariaDBPromisePool(inherited))
+    t.assert.strictEqual(inherited.pool, original.pool)
+    t.assert.strictEqual((await inherited.query('SELECT 42 AS value'))[0].value, 42)
+    const end = original.pool.end.bind(original.pool)
+    let closes = 0
+    t.mock.method(original.pool, 'end', () => { closes++; return end() })
+    await app.close()
+    t.assert.strictEqual(closes, 1)
+  })
+
+  for (const name of ['__proto__', 'constructor', 'toString']) {
+    test(`${name} is safe and rejects duplicates ${unnamed ? 'after an unnamed client' : 'in a named registry'}`, async t => {
+      const app = Fastify()
+      t.after(() => app.close())
+      let prototype
+      if (unnamed) app.register(plugin, { ...config, promise: true })
+      app.register(plugin, { ...config, promise: true, name })
+      app.after(() => {
+        prototype = Object.getPrototypeOf(app.mariadb)
+        t.assert.strictEqual(prototype, unnamed ? Object.prototype : null)
+        t.assert.ok(Object.hasOwn(app.mariadb, name))
+        t.assert.ok(plugin.isMariaDBPromisePool(app.mariadb[name]))
+      })
+      app.register(plugin, { ...config, promise: true, name })
+      await t.assert.rejects(app.ready(), new RegExp(`'${name}' instance name has already been registered`))
+      t.assert.strictEqual(Object.getPrototypeOf(app.mariadb), prototype)
+    })
+  }
+}
+
+test('a child cannot replace an inherited named client', async t => {
+  const app = Fastify()
+  t.after(() => app.close())
+  app.register(plugin, { ...config, promise: true, name: 'parent' })
+  app.register(async scope => {
+    scope.register(plugin, { ...config, promise: true, name: 'parent' })
+  })
+  await t.assert.rejects(app.ready(), /'parent' instance name has already been registered/)
+})
+
+for (const name of ['query', 'pool', 'kind']) {
+  test(`a named client cannot replace the default client's ${name}`, async t => {
+    const app = Fastify()
+    t.after(() => app.close())
+    app.register(plugin, { ...config, promise: true })
+    app.register(plugin, { ...config, promise: true, name })
+    await t.assert.rejects(app.ready(), new RegExp(`'${name}' instance name has already been registered`))
+  })
+}

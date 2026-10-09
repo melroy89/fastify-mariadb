@@ -112,6 +112,18 @@ The plugin accepts MariaDB connector pool and connection options, plus:
 
 Use query placeholders; the plugin has no `format` helper.
 
+### Named instances and scopes
+
+A named registration is available as `fastify.mariadb[name]` in its Fastify scope
+and descendants. Adding a name in a child scope creates a local registry containing
+the inherited clients; it does not add that name to the parent or sibling scopes.
+Independent siblings can reuse a name, but a child cannot replace an inherited name.
+
+An unnamed client can be registered first, followed by named clients. Names must not
+collide with existing client properties such as `query`, `pool`, or `kind`. Names such
+as `__proto__`, `constructor`, and `toString` are supported and checked for duplicates.
+An unnamed registration after an existing registration is rejected.
+
 ### Pool options
 
 Pooling is the default. Connector options passed to `register` are forwarded to `mariadb.createPool()`:
@@ -252,6 +264,12 @@ Set connector options such as `pipelining`, `ssl`, and `trace` in `register`. TL
 Full reference: [connection options](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/node-js-connection-options) · [Promise API](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/connector-nodejs-promise-api).
 
 If the database is unavailable while registering a pool, set the connector's `acquireTimeout` below Fastify's `pluginTimeout` so the pool error reaches Fastify before its plugin startup timeout.
+
+Failed database initialization initiates cleanup, including clients that finish connecting after
+Fastify's startup timeout. `fastify.close()` awaits that cleanup. A pending promise
+connection must settle before it can be closed, so shutdown can wait for the
+connector's configured `connectTimeout`. Set finite connector timeouts appropriate
+for your application.
 
 ## TypeScript
 

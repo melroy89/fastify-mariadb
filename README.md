@@ -40,7 +40,7 @@ fastify.get('/users/:id', async request => {
 })
 ```
 
-Promise queries return rows directly. For writes they return a result object. To obtain field metadata alongside rows, set the connector option `metaAsArray: true`; the result then has a `[rows, metadata]` shape.
+Queries return rows directly; writes return a result object. Set `metaAsArray: true` to receive `[rows, metadata]`.
 
 ### Transactions
 
@@ -104,7 +104,13 @@ The plugin accepts MariaDB connector pool and connection options, plus:
 | `name` | Store a named instance at `fastify.mariadb[name]`. |
 | `connectionString` | Pass a MariaDB connection URI instead of the other connection options. |
 
-`fastify.mariadb` exposes `query`, `execute`, `batch`, `importFile`, `escape`, and `escapeId`. Pool mode also exposes `pool` and `getConnection`. Connection mode exposes `connection` and `queryStream`. The underlying connector instance provides its additional methods. The plugin does not provide a `format` helper; use query placeholders instead.
+`fastify.mariadb` exposes `query`, `execute`, `batch`, `importFile`, `escape`, and `escapeId`.
+
+- Pool mode adds `pool` and `getConnection`.
+- Connection mode adds `connection` and `queryStream`.
+- Additional methods are available on the underlying connector instance.
+
+Use query placeholders; the plugin has no `format` helper.
 
 ### Pool options
 
@@ -127,7 +133,36 @@ fastify.get('/health/db', async () => {
 })
 ```
 
-Supplying `connectionString` overrides the other connector options. See the [MariaDB Connector/Node.js documentation](https://github.com/mariadb-corporation/mariadb-connector-nodejs) for the available options.
+### Connection URI
+
+The plugin's `connectionString` option passes a URI directly to `mariadb.createPool()` in pool mode. Include pool options in the URI's query string:
+
+```js
+fastify.register(require('@melroy89/fastify-mariadb'), {
+  promise: true,
+  connectionString: 'mariadb://app:your-password@localhost:3306/app' +
+    '?connectionLimit=10&connectTimeout=1000&acquireTimeout=5000' +
+    '&queryTimeout=10000&socketTimeout=30000' +
+    '&idleTimeout=60&leakDetectionTimeout=30000'
+})
+```
+
+| URI option | Example setting |
+| --- | --- |
+| `connectionLimit` | At most 10 connections. |
+| `connectTimeout` | 1 second to establish a connection. |
+| `acquireTimeout` | 5 seconds to obtain a pool connection. |
+| `queryTimeout` | 10 seconds per query. |
+| `socketTimeout` | Close a socket after 30 seconds without activity. |
+| `idleTimeout` | Idle pool connection timeout of 60 seconds. Keep below the server's `wait_timeout`. |
+| `leakDetectionTimeout` | Log a possible leak when a connection is borrowed for over 30 seconds. |
+
+Timeout values are milliseconds, except `idleTimeout`, which uses seconds. These are example values; adjust them for your workload.
+
+- `connectionString` replaces separate connector options.
+- Use `encodeURIComponent()` for special characters in URI usernames and passwords.
+
+Full options and defaults: [connection options](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/node-js-connection-options) · [pool options](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/connector-nodejs-promise-api#createpool-options-pool).
 
 ## Benchmark
 
@@ -157,7 +192,8 @@ The plugin uses the official connector directly. Its features are available thro
 
 MariaDB's metadata optimization, pool behavior, and performance characteristics belong to the connector and server. The plugin adds no separate switches for them and makes no performance guarantee.
 
-The examples below assume `promise: true` and completed plugin initialization. Run them inside an async function after `await fastify.ready()`, or use top-level `await` in an ES module. Pool mode is assumed unless connection mode is specified.
+The examples below use `promise: true` and pool mode unless stated otherwise.
+Run them after `await fastify.ready()`, inside an async function or using top-level `await` in an ES module.
 
 For bulk writes, `batch` uses the connector's bulk operation support:
 
@@ -211,7 +247,9 @@ Import a SQL file with the connector's `importFile` method:
 await fastify.mariadb.importFile({ file: './schema.sql' })
 ```
 
-Options such as `pipelining: true`, `ssl: true`, and `trace: true` can be set in `register`. TLS and authentication behavior depend on the server configuration. See the [connector documentation](https://mariadb.com/docs/connectors/mariadb-connector-nodejs) for the full option and method reference.
+Set connector options such as `pipelining`, `ssl`, and `trace` in `register`. TLS and authentication depend on your server configuration.
+
+Full reference: [connection options](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/node-js-connection-options) · [Promise API](https://mariadb.com/docs/connectors/mariadb-connector-nodejs/connector-nodejs-promise-api).
 
 If the database is unavailable while registering a pool, set the connector's `acquireTimeout` below Fastify's `pluginTimeout` so the pool error reaches Fastify before its plugin startup timeout.
 

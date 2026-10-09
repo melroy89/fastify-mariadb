@@ -42,14 +42,30 @@ fastify.get('/users/:id', async request => {
 
 Promise queries return rows directly. For writes they return a result object. To obtain field metadata alongside rows, set the connector option `metaAsArray: true`; the result then has a `[rows, metadata]` shape.
 
-A pool connection must be released after use:
+### Transactions
+
+With `promise: true`, use one borrowed connection to create an order and its item together. This example assumes existing `orders` and `order_items` tables using InnoDB:
 
 ```js
-const connection = await fastify.mariadb.getConnection()
-try {
-  await connection.query('SELECT 1')
-} finally {
-  await connection.release()
+async function createOrder (customerId, productId, quantity) {
+  const connection = await fastify.mariadb.getConnection()
+  try {
+    await connection.beginTransaction()
+    const order = await connection.query(
+      'INSERT INTO orders (customer_id) VALUES (?)', [customerId]
+    )
+    await connection.query(
+      'INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)',
+      [order.insertId, productId, quantity]
+    )
+    await connection.commit()
+    return order.insertId
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    await connection.release()
+  }
 }
 ```
 
@@ -84,6 +100,29 @@ The plugin accepts MariaDB connector pool and connection options, plus:
 | `connectionString` | Pass a MariaDB connection URI instead of the other connection options. |
 
 `fastify.mariadb` exposes `query`, `execute`, `batch`, `importFile`, `escape`, and `escapeId`. Pool mode also exposes `pool` and `getConnection`. Connection mode exposes `connection` and `queryStream`. The underlying connector instance provides its additional methods. The plugin does not provide a `format` helper; use query placeholders instead.
+
+### Pool options
+
+Pooling is the default. Connector options passed to `register` are forwarded to `mariadb.createPool()`:
+
+```js
+const fastify = require('fastify')()
+
+fastify.register(require('@melroy89/fastify-mariadb'), {
+  promise: true,
+  host: 'localhost',
+  user: 'app',
+  password: 'your-password',
+  database: 'app',
+  connectionLimit: 10
+})
+
+fastify.get('/health/db', async () => {
+  return fastify.mariadb.query('SELECT 1 AS ok')
+})
+```
+
+Supplying `connectionString` overrides the other connector options. See the [MariaDB Connector/Node.js documentation](https://github.com/mariadb-corporation/mariadb-connector-nodejs) for the available options.
 
 ## Benchmark
 

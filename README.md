@@ -64,7 +64,7 @@ async function createOrder (customerId, productId, quantity) {
     await connection.rollback()
     throw error
   } finally {
-    await connection.release()
+    await connection.release() // Always release in finally block
   }
 }
 ```
